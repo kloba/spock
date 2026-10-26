@@ -224,8 +224,8 @@ pending. Connection strings in parameters have their password hidden.
 
 `spock.events` is a ring of recent state changes kept in shared memory,
 oldest first. The number of events kept is set by
-`spock.event_history_size`. The history is cleared by a postmaster restart
-and by `spock.reset_events()`.
+`spock.event_history_size`. The history is cleared by a postmaster restart,
+and `spock.reset_events()` clears the events of the current database.
 
 | Column | Description |
 |--------|-------------|
@@ -489,6 +489,6 @@ contents. They are useful for tooling that wants unfiltered rows.
 | `spock.get_monitor_summary()` | Capacity and usage of the shared memory structures. |
 | `spock.get_system_info()` | Host name, operating system, CPU, memory, load averages, disk space of the data and WAL volumes, postmaster start, PostgreSQL and spock versions. |
 | `spock.get_pending_exceptions()` | Transactions being retried under exception handling, with their first error. |
-| `spock.reset_events()` | Clears the event history. |
+| `spock.reset_events()` | Clears the event history of the current database. |
 | `spock.reset_subscription_stats(subid)` | Resets the activity and conflict counters of one or all subscriptions. |
 | `spock.redact_dsn(text)` | Returns a connection string with its password hidden. |

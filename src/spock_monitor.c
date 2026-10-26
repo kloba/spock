@@ -1115,13 +1115,40 @@ spock_get_events(PG_FUNCTION_ARGS)
 Datum
 spock_reset_events(PG_FUNCTION_ARGS)
 {
+	SpockMonitorEvent *kept;
+	int			nkept = 0;
+	int			i;
+
 	check_monitor_shmem();
 
+	/*
+	 * The ring is shared by every database of the instance and spock.events
+	 * shows the events of the current database plus those recorded outside
+	 * any database, so only those are dropped here; another database keeps
+	 * its history.  The survivors are copied out and packed back from the
+	 * start of the ring, since packing in place would overwrite entries not
+	 * yet read once the head has wrapped.
+	 */
+	kept = palloc(sizeof(SpockMonitorEvent) * SpockMonitorShm->event_capacity);
+
 	LWLockAcquire(SpockMonitorShm->lock, LW_EXCLUSIVE);
+	for (i = 0; i < SpockMonitorShm->event_count; i++)
+	{
+		int			idx = (SpockMonitorShm->event_head + i) %
+			SpockMonitorShm->event_capacity;
+		SpockMonitorEvent *event = &SpockMonitorShm->events[idx];
+
+		if (event->dboid == MyDatabaseId || !OidIsValid(event->dboid))
+			continue;
+		kept[nkept++] = *event;
+	}
+	if (nkept > 0)
+		memcpy(SpockMonitorShm->events, kept, sizeof(SpockMonitorEvent) * nkept);
 	SpockMonitorShm->event_head = 0;
-	SpockMonitorShm->event_count = 0;
+	SpockMonitorShm->event_count = nkept;
 	LWLockRelease(SpockMonitorShm->lock);
 
+	pfree(kept);
 	PG_RETURN_VOID();
 }
 
